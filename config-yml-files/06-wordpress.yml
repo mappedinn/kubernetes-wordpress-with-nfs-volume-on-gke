@@ -1,0 +1,50 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: wp01-wordpress
+  labels:
+    app: wp01
+spec:
+  ports:
+    - port: 80
+  selector:
+    app: wp01
+    tier: frontend
+  type: LoadBalancer
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: wp01-wordpress
+  labels:
+    app: wp01
+spec:
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: wp01
+        tier: frontend
+    spec:
+      containers:
+      - image: wordpress:4.6.1-apache
+        name: wordpress
+        env:
+        - name: WORDPRESS_DB_HOST
+          value: wp01-mysql
+        - name: WORDPRESS_DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: wp01-pwd-wordpress
+              key: password
+        ports:
+        - containerPort: 80
+          name: wordpress
+        volumeMounts:
+        - name: wordpress-persistent-storage
+          mountPath: /var/www/html
+      volumes:
+      - name: wordpress-persistent-storage
+        persistentVolumeClaim:
+          claimName: wp01-pvc-data

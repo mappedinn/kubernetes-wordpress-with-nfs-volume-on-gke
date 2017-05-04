@@ -1,0 +1,61 @@
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: wp01-pwd-wordpress
+type: Opaque
+data:
+  password: U3RpZ21AdGcyMTY=
+  # the password is encoded with base64
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: wp01-mysql
+  labels:
+    app: wp01
+spec:
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: wp01
+        tier: mysql
+    spec:
+      containers:
+      - image: mysql:5.6
+        name: mysql
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: wp01-pwd-wordpress
+              key: password
+        ports:
+        - containerPort: 3306
+          name: mysql
+        volumeMounts:
+        - name: mysql-persistent-storage
+          mountPath: /var/lib/mysql
+      volumes:
+      - name: mysql-persistent-storage
+        persistentVolumeClaim:
+          claimName: wp01-pvc-data
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: wp01-mysql
+  labels:
+    app: wp01
+spec:
+  ports:
+    - port: 3306
+  selector:
+    app: wp01
+    tier: mysql
+  clusterIP: None
+  # the clusterIP is none is set to None so that there will be no access to it out of the cluster
